@@ -9,17 +9,17 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data import random_split
 import sqlite3
+
 path = "sqlite3.connect"
 
 
 class ReviewDataset(Dataset):
-
     BOS = "<|beginningofsequence|>"
     EOS = "<|endofsequence|"
     PAD = "<|pad|>"
 
     def __init__(self):
-        self.tokenizer = GPT2Tokenizer.from_pretrained(
+        self.tokenizer = GPT2Tokenizer.from_pretrained( # assigns beginning, end and pad tokens to each review
             "gpt2",
             bos_token=self.BOS,
             eos_token=self.EOS,
@@ -34,7 +34,8 @@ class ReviewDataset(Dataset):
         con.close()
 
     def _process(self, con):
-        for row in con.execute("select body from reviews limit 100"):
+        for row in con.execute( # iterates through SQLite file
+                "select body from reviews limit 100"):  # limit can be changed/removed based on your settings
             token_dict = self.tokenizer(
                 self.BOS + row[0] + self.EOS,
                 truncation=True,
@@ -55,16 +56,16 @@ class ReviewDataset(Dataset):
     def __getitem__(self, idx):
         return self.processed[idx]
 
-    @property
+    @property # the "train" portion of the dataset, in this case 90% of the reviews
     def train_len(self) -> int:
         return int(len(self) * 0.9)
 
     @property
-    def eval_len(self):
+    def eval_len(self): # the "test" portion, 10%
         return len(self) - self.train_len
 
 
-print("doing stuff")
+print("doing stuff") # This loads the model and puts the dataset into train and test groups
 dataset = ReviewDataset()
 dataset.tokenizer.save_pretrained("rev_tokenizer")
 config = GPT2Config.from_pretrained("gpt2", output_hidden_states=False)
@@ -83,7 +84,7 @@ def data_collector(features):
     }
 
 
-train_args = TrainingArguments(
+train_args = TrainingArguments( # how the model will be trained -- good to change these with your settings
     output_dir="./results",
     num_train_epochs=6,
     per_device_train_batch_size=1,
@@ -95,7 +96,7 @@ train_args = TrainingArguments(
 )
 
 print("doing more stuff")
-trainer = Trainer(
+trainer = Trainer( # initializes object that will actually train the data
     model=model,
     args=train_args,
     train_dataset=train_set,
@@ -105,4 +106,4 @@ trainer = Trainer(
 
 print("training data")
 trainer.train()
-trainer.save_model("./rev_model")
+trainer.save_model("./rev_model") # saves model
